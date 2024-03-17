@@ -11,6 +11,10 @@ const port = 3000;
 
 app.use(express.json());
 
+app.post("/",async (req,res)=>{
+    res.send('Welcome To MythMaker Backend')
+});
+
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const lowerCaseEmail = email.toLowerCase();
