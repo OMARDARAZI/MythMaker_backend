@@ -2,8 +2,8 @@ import express from "express";
 import mongoose from "mongoose";
 import User from "./modules/User.js";
 import Post from "./modules/posts.js";
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { createToken, validateToken } from "./jwt.js";
 
 const app = express();
@@ -11,8 +11,8 @@ const port = 3000;
 
 app.use(express.json());
 
-app.post("/",async (req,res)=>{
-    res.send('Welcome To MythMaker Backend')
+app.post("/", async (req, res) => {
+  res.send("Welcome To MythMaker Backend");
 });
 
 app.post("/login", async (req, res) => {
@@ -44,11 +44,9 @@ app.post("/register", async (req, res) => {
       return res.status(400).send("User already exists.");
     }
 
-    // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create a new user
     const user = new User({
       name,
       email: lowerCaseEmail,
@@ -72,6 +70,22 @@ app.post("/register", async (req, res) => {
   } catch (error) {
     res.status(500).send("An error occurred during registration.");
     console.error(error);
+  }
+});
+
+app.get("/getUserInfo", validateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    const { password, ...userInfo } = user.toObject();
+    res.json(userInfo);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server error");
   }
 });
 
