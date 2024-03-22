@@ -412,7 +412,7 @@ app.get("/feed", async (req, res) => {
 
 mongoose
   .connect(
-    `mongodb+srv://folk21434:HtxB6Ry9xO1LK6xe@mythmaker.piqbasd.mongodb.net/Database?retryWrites=true&w=majority&appName=mythmaker`,
+    `mongodb+srv://folk21434:HtxB6Ry9xO1LK6xe@mythmaker.piqbasd.mongodb.net/?retryWrites=true&w=majority&appName=mythmaker`,
     {}
   )
   .then(() => {
