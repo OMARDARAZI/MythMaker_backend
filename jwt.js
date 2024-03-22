@@ -6,7 +6,6 @@ export const createToken = (user) => {
       {
         email: user.email,   
         id: user._id,        
-        isAdmin: user.isAdmin
       },
       '123',
     );

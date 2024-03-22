@@ -38,7 +38,7 @@ app.post("/register", async (req, res) => {
   const lowerCaseEmail = email.toLowerCase();
 
   try {
-    // Check if the user already exists
+  
     const existingUser = await User.findOne({ email: lowerCaseEmail });
     if (existingUser) {
       return res.status(400).send("User already exists.");
@@ -56,13 +56,10 @@ app.post("/register", async (req, res) => {
       pfp,
     });
 
-    // Save the new user to the database
     await user.save();
 
-    // Optionally, create a token for the new user
     const accessToken = createToken(user);
 
-    // Respond with success message (consider not sending back sensitive info)
     res.status(201).json({
       message: "User registered successfully",
       accessToken, // Send the token to the user
@@ -72,6 +69,8 @@ app.post("/register", async (req, res) => {
     console.error(error);
   }
 });
+
+
 
 app.get("/getUserInfo", validateToken, async (req, res) => {
   try {
@@ -89,9 +88,11 @@ app.get("/getUserInfo", validateToken, async (req, res) => {
   }
 });
 
+
+
 app.post("/follow", async (req, res) => {
-  const currentUserId = req.body.currentUserId; // The ID of the current user making the request
-  const targetUserId = req.body.targetUserId; // The ID of the user to follow
+  const currentUserId = req.body.currentUserId; 
+  const targetUserId = req.body.targetUserId; 
 
   if (!currentUserId || !targetUserId) {
     return res
@@ -100,12 +101,10 @@ app.post("/follow", async (req, res) => {
   }
 
   try {
-    // Prevent a user from following themselves
     if (currentUserId === targetUserId) {
       return res.status(400).send("You cannot follow yourself.");
     }
 
-    // Fetch both the current and target users
     const currentUser = await User.findById(currentUserId);
     const targetUser = await User.findById(targetUserId);
 
@@ -113,16 +112,13 @@ app.post("/follow", async (req, res) => {
       return res.status(404).send("One or both users not found.");
     }
 
-    // Check if already following the target user
     if (currentUser.following.includes(targetUserId)) {
       return res.status(400).send("You are already following this user.");
     }
 
-    // Add the target user to the current user's following list
     currentUser.following.push(targetUserId);
     await currentUser.save();
 
-    // Add the current user to the target user's followers list
     if (!targetUser.followers.includes(currentUserId)) {
       targetUser.followers.push(currentUserId);
       await targetUser.save();
@@ -157,11 +153,9 @@ app.post("/unfollow", async (req, res) => {
       return res.status(404).send("One or both users not found.");
     }
 
-    // Remove the target user from the current user's following list
     currentUser.following.pull(targetUserId);
     await currentUser.save();
 
-    // Remove the current user from the target user's followers list
     targetUser.followers.pull(currentUserId);
     await targetUser.save();
 
@@ -173,8 +167,8 @@ app.post("/unfollow", async (req, res) => {
 });
 
 app.post("/likePost", async (req, res) => {
-  const postId = req.body.postId; // ID of the post to be liked
-  const userId = req.body.userId; // ID of the user liking the post
+  const postId = req.body.postId;
+  const userId = req.body.userId;
 
   if (!postId || !userId) {
     return res.status(400).send("Post ID and User ID are required.");
@@ -187,12 +181,10 @@ app.post("/likePost", async (req, res) => {
       return res.status(404).send("Post not found.");
     }
 
-    // Check if the user has already liked the post
     if (post.likes.includes(userId)) {
       return res.status(400).send("You already liked this post.");
     }
 
-    // Add the user's ID to the likes array
     post.likes.push(userId);
     await post.save();
 
@@ -202,6 +194,8 @@ app.post("/likePost", async (req, res) => {
     console.error(error);
   }
 });
+
+
 
 app.post("/removeLike", async (req, res) => {
   const { postId, userId } = req.body;
@@ -217,12 +211,10 @@ app.post("/removeLike", async (req, res) => {
       return res.status(404).send("Post not found.");
     }
 
-    // Check if the user has liked the post
     if (!post.likes.includes(userId)) {
       return res.status(400).send("You have not liked this post.");
     }
 
-    // Remove the user's ID from the likes array
     post.likes.pull(userId);
     await post.save();
 
@@ -234,7 +226,7 @@ app.post("/removeLike", async (req, res) => {
 });
 
 app.get("/hasLikedPost", async (req, res) => {
-  const { postId, userId } = req.query; // Assuming postId and userId are passed as query parameters
+  const { postId, userId } = req.query; 
 
   if (!postId || !userId) {
     return res.status(400).send("Post ID and User ID are required.");
@@ -247,7 +239,6 @@ app.get("/hasLikedPost", async (req, res) => {
       return res.status(404).send("Post not found.");
     }
 
-    // Check if the user's ID is in the likes array of the post
     const hasLiked = post.likes.includes(userId);
 
     res.status(200).json({ hasLiked });
@@ -258,9 +249,9 @@ app.get("/hasLikedPost", async (req, res) => {
 });
 
 app.post("/comment", async (req, res) => {
-  const postId = req.body.postId; // ID of the post to comment on
-  const userId = req.body.userId; // ID of the user making the comment
-  const text = req.body.text; // Text of the comment
+  const postId = req.body.postId; 
+  const userId = req.body.userId; 
+  const text = req.body.text; 
 
   if (!postId || !userId || !text) {
     return res
@@ -275,14 +266,12 @@ app.post("/comment", async (req, res) => {
       return res.status(404).send("Post not found.");
     }
 
-    // Create a new comment object
     const comment = {
       text: text,
       postedBy: userId,
-      createdAt: new Date(), // Optionally set the creation date of the comment
+      createdAt: new Date(), 
     };
 
-    // Add the comment to the post's comments array
     post.comments.push(comment);
     await post.save();
 
@@ -307,7 +296,6 @@ app.post("/removeComment", async (req, res) => {
       return res.status(404).send("Post not found.");
     }
 
-    // Find and remove the comment by its ID
     const commentIndex = post.comments.findIndex(
       (comment) => comment._id.toString() === commentId
     );
@@ -326,27 +314,23 @@ app.post("/removeComment", async (req, res) => {
 });
 
 app.get("/searchUsers", async (req, res) => {
-  const searchQuery = req.query.name; // Get the search query from the request's query parameters
+  const searchQuery = req.query.name; 
 
   if (!searchQuery) {
     return res.status(400).send("A search query is required.");
   }
 
   try {
-    // Create a case-insensitive regular expression to search for names containing the provided characters
     const regex = new RegExp(searchQuery, "i");
 
-    // Find users whose name contains the search query
     const users = await User.find({ name: regex });
 
     if (users.length === 0) {
-      // No users found
       return res
         .status(404)
         .send("No users found matching the search criteria.");
     }
 
-    // Users found
     res.status(200).json(users);
   } catch (error) {
     res.status(500).send("An error occurred during the search process.");
@@ -362,7 +346,6 @@ app.post("/addPost", async (req, res) => {
       image: req.body.image,
       likes: req.body.likes,
       comments: req.body.comments,
-      postedBy: req.body.postedBy,
     });
 
     await post.save();
