@@ -38,7 +38,6 @@ app.post("/register", async (req, res) => {
   const lowerCaseEmail = email.toLowerCase();
 
   try {
-  
     const existingUser = await User.findOne({ email: lowerCaseEmail });
     if (existingUser) {
       return res.status(400).send("User already exists.");
@@ -70,8 +69,6 @@ app.post("/register", async (req, res) => {
   }
 });
 
-
-
 app.get("/getUserInfo", validateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -88,11 +85,9 @@ app.get("/getUserInfo", validateToken, async (req, res) => {
   }
 });
 
-
-
 app.post("/follow", async (req, res) => {
-  const currentUserId = req.body.currentUserId; 
-  const targetUserId = req.body.targetUserId; 
+  const currentUserId = req.body.currentUserId;
+  const targetUserId = req.body.targetUserId;
 
   if (!currentUserId || !targetUserId) {
     return res
@@ -195,8 +190,6 @@ app.post("/likePost", async (req, res) => {
   }
 });
 
-
-
 app.post("/removeLike", async (req, res) => {
   const { postId, userId } = req.body;
 
@@ -226,7 +219,7 @@ app.post("/removeLike", async (req, res) => {
 });
 
 app.get("/hasLikedPost", async (req, res) => {
-  const { postId, userId } = req.query; 
+  const { postId, userId } = req.query;
 
   if (!postId || !userId) {
     return res.status(400).send("Post ID and User ID are required.");
@@ -249,9 +242,9 @@ app.get("/hasLikedPost", async (req, res) => {
 });
 
 app.post("/comment", async (req, res) => {
-  const postId = req.body.postId; 
-  const userId = req.body.userId; 
-  const text = req.body.text; 
+  const postId = req.body.postId;
+  const userId = req.body.userId;
+  const text = req.body.text;
 
   if (!postId || !userId || !text) {
     return res
@@ -269,7 +262,7 @@ app.post("/comment", async (req, res) => {
     const comment = {
       text: text,
       postedBy: userId,
-      createdAt: new Date(), 
+      createdAt: new Date(),
     };
 
     post.comments.push(comment);
@@ -314,7 +307,7 @@ app.post("/removeComment", async (req, res) => {
 });
 
 app.get("/searchUsers", async (req, res) => {
-  const searchQuery = req.query.name; 
+  const searchQuery = req.query.name;
 
   if (!searchQuery) {
     return res.status(400).send("A search query is required.");
