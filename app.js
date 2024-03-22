@@ -372,6 +372,29 @@ app.get("/post/:postId", async (req, res) => {
 });
 
 
+app.get("/user/:userId/posts", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const posts = await Post.find({ postedBy: userId })
+      .populate('postedBy', 'name -_id') // Assuming you still want to populate the 'postedBy' field
+      .populate({
+        path: 'comments.postedBy',
+        select: 'name -_id' // Populating comment authors, adjust as necessary
+      });
+
+    if (posts.length === 0) {
+      return res.status(404).send("No posts found for this user.");
+    }
+
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("An error occurred while retrieving the user's posts.");
+  }
+});
+
+
 
 app.get("/feed", async (req, res) => {
   const userId = req.query.userId;
