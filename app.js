@@ -351,36 +351,35 @@ app.post("/addPost", async (req, res) => {
 
 app.get("/post/:postId", async (req, res) => {
   try {
-    const postId = req.params.postId; 
+    const postId = req.params.postId;
 
     const post = await Post.findById(postId)
-      .populate('postedBy', 'name -_id') 
+      .populate("postedBy", "name -_id")
       .populate({
-        path: 'comments.postedBy',
-        select: 'name -_id' 
+        path: "comments.postedBy",
+        select: "name -_id",
       });
 
     if (!post) {
-      return res.status(404).send("Post not found."); 
+      return res.status(404).send("Post not found.");
     }
 
-    res.status(200).json(post); 
+    res.status(200).json(post);
   } catch (error) {
     console.error(error);
     res.status(500).send("An error occurred while retrieving the post.");
   }
 });
 
-
 app.get("/user/:userId/posts", async (req, res) => {
   try {
     const userId = req.params.userId;
 
     const posts = await Post.find({ postedBy: userId })
-      .populate('postedBy', 'name -_id') // Assuming you still want to populate the 'postedBy' field
+      .populate("postedBy", "name -_id") // Assuming you still want to populate the 'postedBy' field
       .populate({
-        path: 'comments.postedBy',
-        select: 'name -_id' // Populating comment authors, adjust as necessary
+        path: "comments.postedBy",
+        select: "name -_id", // Populating comment authors, adjust as necessary
       });
 
     if (posts.length === 0) {
@@ -390,11 +389,11 @@ app.get("/user/:userId/posts", async (req, res) => {
     res.status(200).json(posts);
   } catch (error) {
     console.error(error);
-    res.status(500).send("An error occurred while retrieving the user's posts.");
+    res
+      .status(500)
+      .send("An error occurred while retrieving the user's posts.");
   }
 });
-
-
 
 app.get("/feed", async (req, res) => {
   const userId = req.query.userId;
@@ -409,9 +408,14 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    const posts = await Post.find({ postedBy: { $in: user.following } }).sort({
-      createdAt: -1,
-    });
+    const posts = await Post.find({ postedBy: { $in: user.following } })
+      .sort({ createdAt: -1 })
+      .populate("postedBy", "name -_id")
+      .populate({
+        path: "comments.postedBy",
+        select: "name -_id",
+      });
+
     res.status(200).json(posts);
   } catch (error) {
     res.status(500).send("An error occurred while retrieving the feed.");
