@@ -410,10 +410,10 @@ app.get("/feed", async (req, res) => {
 
     const posts = await Post.find({ postedBy: { $in: user.following } })
       .sort({ createdAt: -1 })
-      .populate("postedBy", "name -_id")
+      .populate("postedBy", "pfp name _id") 
       .populate({
         path: "comments.postedBy",
-        select: "name -_id",
+        select: "pfp name _id",
       });
 
     res.status(200).json(posts);
@@ -422,6 +422,7 @@ app.get("/feed", async (req, res) => {
     console.error(error);
   }
 });
+
 
 mongoose
   .connect(
