@@ -27,7 +27,14 @@ app.post("/login", async (req, res) => {
     if (!passwordMatch) return res.status(400).send("Wrong email or password");
 
     const accessToken = createToken(user);
-    res.status(200).json({ message: "Login Successfully", accessToken });
+
+    res.status(200).json({
+      message: "Login Successfully",
+      accessToken,
+      userId: user.id, 
+      email: user.email,
+      name: user.name 
+    });
   } catch (e) {
     res.status(500).send(e.message);
   }
@@ -410,7 +417,7 @@ app.get("/feed", async (req, res) => {
 
     const posts = await Post.find({ postedBy: { $in: user.following } })
       .sort({ createdAt: -1 })
-      .populate("postedBy", "pfp name _id") 
+      .populate("postedBy", "pfp name _id")
       .populate({
         path: "comments.postedBy",
         select: "pfp name _id",
@@ -422,7 +429,6 @@ app.get("/feed", async (req, res) => {
     console.error(error);
   }
 });
-
 
 mongoose
   .connect(
