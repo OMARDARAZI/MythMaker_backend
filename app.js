@@ -431,6 +431,45 @@ app.get("/feed", async (req, res) => {
   }
 });
 
+app.patch("/updatePfp/:userId", async (req, res) => {
+  const userId = req.params.userId;
+  const { pfp } = req.body;
+
+  if (!userId) {
+    return res.status(400).send("User ID is required.");
+  }
+
+  if (!pfp) {
+    return res.status(400).send("Profile picture data is required.");
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { pfp: pfp } },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).send("User not found.");
+    }
+
+    const { password, ...userInfo } = user.toObject();
+
+    res
+      .status(200)
+      .json({
+        message: "Profile picture updated successfully",
+        user: userInfo,
+      });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .send("An error occurred while updating the profile picture.");
+  }
+});
+
 mongoose
   .connect(
     `mongodb+srv://folk21434:HtxB6Ry9xO1LK6xe@mythmaker.piqbasd.mongodb.net/database?retryWrites=true&w=majority&appName=mythmaker`,
