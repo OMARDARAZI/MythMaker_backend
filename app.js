@@ -85,13 +85,17 @@ app.get("/getUserInfo", validateToken, async (req, res) => {
       return res.status(404).json({ msg: "User not found" });
     }
 
+    const posts = await Post.find({ postedBy: user._id }).lean();
+
     const { password, ...userInfo } = user.toObject();
-    res.json(userInfo);
+    
+    res.json({...userInfo, posts});
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server error");
   }
 });
+
 
 app.post("/follow", async (req, res) => {
   const currentUserId = req.body.currentUserId;
@@ -456,17 +460,49 @@ app.patch("/updatePfp/:userId", async (req, res) => {
 
     const { password, ...userInfo } = user.toObject();
 
-    res
-      .status(200)
-      .json({
-        message: "Profile picture updated successfully",
-        user: userInfo,
-      });
+    res.status(200).json({
+      message: "Profile picture updated successfully",
+      user: userInfo,
+    });
   } catch (error) {
     console.error(error);
     res
       .status(500)
       .send("An error occurred while updating the profile picture.");
+  }
+});
+
+app.patch("/updateBio/:userId", async (req, res) => {
+  const userId = req.params.userId;
+  const { bio } = req.body;
+
+  if (!userId) {
+    return res.status(400).send("User ID is required.");
+  }
+
+  if (bio === undefined) {
+    return res.status(400).send("Bio content is required.");
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { bio: bio } },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).send("User not found.");
+    }
+
+    const { password, ...userInfo } = user.toObject();
+
+    res
+      .status(200)
+      .json({ message: "Bio updated successfully", user: userInfo });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("An error occurred while updating the bio.");
   }
 });
 
