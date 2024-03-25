@@ -31,9 +31,10 @@ app.post("/login", async (req, res) => {
     res.status(200).json({
       message: "Login Successfully",
       accessToken,
-      userId: user.id, 
+      userId: user.id,
       email: user.email,
-      name: user.name 
+      name: user.name,
+      pfp: user.pfp,
     });
   } catch (e) {
     res.status(500).send(e.message);
