@@ -420,13 +420,28 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    const posts = await Post.find({ postedBy: { $in: user.following } })
-      .sort({ createdAt: -1 })
-      .populate("postedBy", "pfp name _id")
-      .populate({
-        path: "comments.postedBy",
-        select: "pfp name _id",
-      });
+    let posts;
+    // Check if the user is following anyone
+    if (user.following.length === 0) {
+      // User is not following anyone, fetch 15 most liked posts
+      posts = await Post.find({})
+        .sort({ likes: -1 }) // Assuming 'likes' field exists and represents the number of likes
+        .limit(15)
+        .populate("postedBy", "pfp name _id")
+        .populate({
+          path: "comments.postedBy",
+          select: "pfp name _id",
+        });
+    } else {
+      // User is following someone, fetch posts from the people they are following
+      posts = await Post.find({ postedBy: { $in: user.following } })
+        .sort({ createdAt: -1 })
+        .populate("postedBy", "pfp name _id")
+        .populate({
+          path: "comments.postedBy",
+          select: "pfp name _id",
+        });
+    }
 
     res.status(200).json(posts);
   } catch (error) {
@@ -434,6 +449,7 @@ app.get("/feed", async (req, res) => {
     console.error(error);
   }
 });
+
 
 app.patch("/updatePfp/:userId", async (req, res) => {
   const userId = req.params.userId;
