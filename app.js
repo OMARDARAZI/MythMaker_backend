@@ -420,26 +420,13 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    let postsQuery;
-    if (user.following.length === 0) {
-      postsQuery = Post.find({}).sort({ likes: -1 }).limit(15);
-    } else {
-      postsQuery = Post.find({ postedBy: { $in: user.following } }).sort({ createdAt: -1 });
-    }
-
-    // Initially populate postedBy
-    let posts = await postsQuery.populate("postedBy", "pfp name _id").populate({
-      path: "comments.postedBy",
-      select: "pfp name _id",
-    });
-
-    // Fallback: Ensure postedBy is not null (Example workaround, might not be needed if data integrity is ensured)
-    posts = await Promise.all(posts.map(async (post) => {
-      if (!post.postedBy) {
-        post.postedBy = await User.findById(post.postedBy._id, "pfp name _id");
-      }
-      return post;
-    }));
+    const posts = await Post.find({ postedBy: { $in: user.following } })
+      .sort({ createdAt: -1 })
+      .populate("postedBy", "pfp name _id")
+      .populate({
+        path: "comments.postedBy",
+        select: "pfp name _id",
+      });
 
     res.status(200).json(posts);
   } catch (error) {
@@ -447,7 +434,6 @@ app.get("/feed", async (req, res) => {
     console.error(error);
   }
 });
-
 
 app.patch("/updatePfp/:userId", async (req, res) => {
   const userId = req.params.userId;
