@@ -420,20 +420,34 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    const posts = await Post.find({ postedBy: { $in: user.following } })
-      .sort({ createdAt: -1 })
-      .populate("postedBy", "pfp name _id")
-      .populate({
-        path: "comments.postedBy",
-        select: "pfp name _id",
-      });
-
-    res.status(200).json(posts);
+    // If user is following others, fetch the posts by those they're following
+    if (user.following.length > 0) {
+      const posts = await Post.find({ postedBy: { $in: user.following } })
+        .sort({ createdAt: -1 })
+        .populate("postedBy", "pfp name _id")
+        .populate({
+          path: "comments.postedBy",
+          select: "pfp name _id",
+        });
+      res.status(200).json(posts);
+    } else {
+      // If user is not following anyone, fetch the 8 most liked posts
+      const posts = await Post.find({})
+        .sort({ likes: -1 }) // Assuming 'likes' is the field that stores the number of likes for a post
+        .limit(8) // Limits the number of posts returned to 8
+        .populate("postedBy", "pfp name _id")
+        .populate({
+          path: "comments.postedBy",
+          select: "pfp name _id",
+        });
+      res.status(200).json(posts);
+    }
   } catch (error) {
     res.status(500).send("An error occurred while retrieving the feed.");
     console.error(error);
   }
 });
+
 
 app.patch("/updatePfp/:userId", async (req, res) => {
   const userId = req.params.userId;
