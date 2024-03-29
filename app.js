@@ -420,28 +420,26 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    let posts;
-    // Check if the user is following anyone
+    let postsQuery;
     if (user.following.length === 0) {
-      // User is not following anyone, fetch 15 most liked posts
-      posts = await Post.find({})
-        .sort({ likes: -1 }) // Assuming 'likes' field exists and represents the number of likes
-        .limit(15)
-        .populate("postedBy", "pfp name _id")
-        .populate({
-          path: "comments.postedBy",
-          select: "pfp name _id",
-        });
+      postsQuery = Post.find({}).sort({ likes: -1 }).limit(15);
     } else {
-      // User is following someone, fetch posts from the people they are following
-      posts = await Post.find({ postedBy: { $in: user.following } })
-        .sort({ createdAt: -1 })
-        .populate("postedBy", "pfp name _id")
-        .populate({
-          path: "comments.postedBy",
-          select: "pfp name _id",
-        });
+      postsQuery = Post.find({ postedBy: { $in: user.following } }).sort({ createdAt: -1 });
     }
+
+    // Initially populate postedBy
+    let posts = await postsQuery.populate("postedBy", "pfp name _id").populate({
+      path: "comments.postedBy",
+      select: "pfp name _id",
+    });
+
+    // Fallback: Ensure postedBy is not null (Example workaround, might not be needed if data integrity is ensured)
+    posts = await Promise.all(posts.map(async (post) => {
+      if (!post.postedBy) {
+        post.postedBy = await User.findById(post.postedBy._id, "pfp name _id");
+      }
+      return post;
+    }));
 
     res.status(200).json(posts);
   } catch (error) {
