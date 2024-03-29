@@ -409,9 +409,6 @@ app.get("/user/:userId/posts", async (req, res) => {
 
 app.get("/feed", async (req, res) => {
   const userId = req.query.userId;
-  // Assuming page number is passed via query parameter & defaulting to 1 if not provided
-  const page = parseInt(req.query.page, 10) || 1;
-  const pageSize = 10; // Number of posts per page
 
   if (!userId) {
     return res.status(400).send("User ID is required.");
@@ -423,22 +420,8 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    let query;
-    let sort = { createdAt: -1 }; // Default sort
-
-    if (user.following.length > 0) {
-      // If user is following others, find posts from those users
-      query = Post.find({ postedBy: { $in: user.following } });
-    } else {
-      // If user is not following anyone, find posts with the most likes
-      query = Post.find({});
-      sort = { likes: -1, createdAt: -1 }; // Adjust sort to prioritize likes
-    }
-
-    const posts = await query
-      .sort(sort)
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
+    const posts = await Post.find({ postedBy: { $in: user.following } })
+      .sort({ createdAt: -1 })
       .populate("postedBy", "pfp name _id")
       .populate({
         path: "comments.postedBy",
@@ -451,7 +434,6 @@ app.get("/feed", async (req, res) => {
     console.error(error);
   }
 });
-
 
 app.patch("/updatePfp/:userId", async (req, res) => {
   const userId = req.params.userId;
