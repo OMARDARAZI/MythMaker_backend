@@ -420,7 +420,6 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
-    // If user is following others, fetch the posts by those they're following
     if (user.following.length > 0) {
       const posts = await Post.find({ postedBy: { $in: user.following } })
         .sort({ createdAt: -1 })
@@ -431,10 +430,9 @@ app.get("/feed", async (req, res) => {
         });
       res.status(200).json(posts);
     } else {
-      // If user is not following anyone, fetch the 8 most liked posts
       const posts = await Post.find({})
-        .sort({ likes: -1 }) // Assuming 'likes' is the field that stores the number of likes for a post
-        .limit(8) // Limits the number of posts returned to 8
+        .sort({ likes: -1 }) 
+        .limit(15) 
         .populate("postedBy", "pfp name _id")
         .populate({
           path: "comments.postedBy",
