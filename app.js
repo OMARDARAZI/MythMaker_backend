@@ -420,48 +420,33 @@ app.get("/feed", async (req, res) => {
       return res.status(404).send("User not found.");
     }
 
+    // If user is following others, fetch the posts by those they're following
     if (user.following.length > 0) {
       const posts = await Post.find({ postedBy: { $in: user.following } })
         .sort({ createdAt: -1 })
-        .populate({
-          path: "postedBy",
-          select: "pfp name _id",
-          match: { _id: { $exists: true } } // Ensures that only documents with a valid '_id' are populated
-        })
+        .populate("postedBy", "pfp name _id")
         .populate({
           path: "comments.postedBy",
           select: "pfp name _id",
-          match: { _id: { $exists: true } }
         });
-
-      // Filter out any posts where 'postedBy' couldn't be populated
-      const filteredPosts = posts.filter(post => post.postedBy != null);
-      res.status(200).json(filteredPosts);
+      res.status(200).json(posts);
     } else {
+      // If user is not following anyone, fetch the 8 most liked posts
       const posts = await Post.find({})
-        .sort({ likes: -1 })
-        .limit(8)
-        .populate({
-          path: "postedBy",
-          select: "pfp name _id",
-          match: { _id: { $exists: true } }
-        })
+        .sort({ likes: -1 }) // Assuming 'likes' is the field that stores the number of likes for a post
+        .limit(8) // Limits the number of posts returned to 8
+        .populate("postedBy", "pfp name _id")
         .populate({
           path: "comments.postedBy",
           select: "pfp name _id",
-          match: { _id: { $exists: true } }
         });
-
-      // Filter out any posts where 'postedBy' couldn't be populated
-      const filteredPosts = posts.filter(post => post.postedBy != null);
-      res.status(200).json(filteredPosts);
+      res.status(200).json(posts);
     }
   } catch (error) {
     res.status(500).send("An error occurred while retrieving the feed.");
     console.error(error);
   }
 });
-
 
 
 app.patch("/updatePfp/:userId", async (req, res) => {
