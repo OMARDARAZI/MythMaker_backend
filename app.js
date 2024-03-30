@@ -123,7 +123,6 @@ app.post("/follow", async (req, res) => {
       return res.status(400).send("You are already following this user.");
     }
 
-    // Check if the current user is already followed by the target user
     if (targetUser.followers.includes(currentUserId)) {
       return res.status(400).send("You cannot follow a user who is already following you.");
     }
@@ -349,6 +348,28 @@ app.get("/searchUsers", async (req, res) => {
     console.error(error);
   }
 });
+
+app.get("/searchPosts", async (req, res) => {
+  const { query } = req.query; // Assuming the search term is passed as a query parameter
+
+  if (!query) {
+    return res.status(400).send("Search query is required.");
+  }
+
+  try {
+    const posts = await Post.find({
+      $or: [
+        { title: { $regex: query, $options: "i" } }, // Case-insensitive search in title
+        { story: { $regex: query, $options: "i" } }  // Case-insensitive search in story
+      ]
+    });
+
+    res.json(posts);
+  } catch (error) {
+    res.status(500).send("An error occurred while searching for posts.");
+  }
+});
+
 
 app.post("/addPost", async (req, res) => {
   try {
