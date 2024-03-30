@@ -123,13 +123,16 @@ app.post("/follow", async (req, res) => {
       return res.status(400).send("You are already following this user.");
     }
 
+    // Check if the current user is already followed by the target user
+    if (targetUser.followers.includes(currentUserId)) {
+      return res.status(400).send("You cannot follow a user who is already following you.");
+    }
+
     currentUser.following.push(targetUserId);
     await currentUser.save();
 
-    if (!targetUser.followers.includes(currentUserId)) {
-      targetUser.followers.push(currentUserId);
-      await targetUser.save();
-    }
+    targetUser.followers.push(currentUserId);
+    await targetUser.save();
 
     res.status(200).send("Followed successfully.");
   } catch (error) {
@@ -158,6 +161,10 @@ app.post("/unfollow", async (req, res) => {
 
     if (!currentUser || !targetUser) {
       return res.status(404).send("One or both users not found.");
+    }
+
+    if (!currentUser.following.includes(targetUserId)) {
+      return res.status(400).send("You are not following this user.");
     }
 
     currentUser.following.pull(targetUserId);
