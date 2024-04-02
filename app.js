@@ -350,7 +350,7 @@ app.get("/searchUsers", async (req, res) => {
 });
 
 app.get("/searchPosts", async (req, res) => {
-  const { query } = req.query; // Assuming the search term is passed as a query parameter
+  const { query } = req.query; 
 
   if (!query) {
     return res.status(400).send("Search query is required.");
@@ -359,16 +359,23 @@ app.get("/searchPosts", async (req, res) => {
   try {
     const posts = await Post.find({
       $or: [
-        { title: { $regex: query, $options: "i" } }, // Case-insensitive search in title
-        { story: { $regex: query, $options: "i" } }  // Case-insensitive search in story
+        { title: { $regex: query, $options: "i" } }, 
+        { story: { $regex: query, $options: "i" } }  
       ]
+    })
+    .populate("postedBy", "name -_id") 
+    .populate({
+      path: "comments.postedBy",
+      select: "name -_id",
     });
 
-    res.json(posts);
+    res.json(posts); 
   } catch (error) {
+    console.error(error);
     res.status(500).send("An error occurred while searching for posts.");
   }
 });
+
 
 
 app.post("/addPost", async (req, res) => {
