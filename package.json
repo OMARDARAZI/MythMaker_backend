@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.1613.0",
     "bcrypt": "^5.1.1",
     "express": "^4.18.3",
     "jsonwebtoken": "^9.0.2",

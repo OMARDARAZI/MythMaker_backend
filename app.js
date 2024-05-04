@@ -6,6 +6,19 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createToken, validateToken } from "./jwt.js";
 
+
+import AWS from 'aws-sdk';
+AWS.config.update({
+  accessKeyId: 'AKIAX4I53MGBE2FL6MX3',
+  secretAccessKey: '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',
+  region: 'us-east-1',
+});
+const polly = new AWS.Polly();
+
+
+
+
+
 const app = express();
 const port = 3000;
 
@@ -14,6 +27,33 @@ app.use(express.json());
 app.post("/", async (req, res) => {
   res.send("Welcome To MythMaker Backend");
 });
+
+
+app.post('/speak', async (req, res) => {
+  const { text, voiceId } = req.body;  
+  const params = {
+      Text: text,
+      OutputFormat: 'mp3',
+      VoiceId: voiceId || 'Joanna'  
+  };
+
+  try {
+      const { AudioStream } = await polly.synthesizeSpeech(params).promise();
+      if (AudioStream instanceof Buffer) {
+          res.writeHead(200, {
+              'Content-Type': 'audio/mp3',
+              'Content-Length': AudioStream.length
+          });
+          res.end(AudioStream);
+      } else {
+          res.status(404).send('Audio stream not available');
+      }
+  } catch (err) {
+      console.error('Error calling Amazon Polly:', err);
+      res.status(500).send(err.message);
+  }
+});
+
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -95,7 +135,6 @@ app.get("/getUserInfo", validateToken, async (req, res) => {
     res.status(500).send("Server error");
   }
 });
-
 
 app.post("/follow", async (req, res) => {
   const currentUserId = req.body.currentUserId;
@@ -376,8 +415,6 @@ app.get("/searchPosts", async (req, res) => {
   }
 });
 
-
-
 app.post("/addPost", async (req, res) => {
   try {
     const post = new Post({
@@ -480,7 +517,6 @@ app.get("/feed", async (req, res) => {
     console.error(error);
   }
 });
-
 
 app.patch("/updatePfp/:userId", async (req, res) => {
   const userId = req.params.userId;
