@@ -1,4 +1,6 @@
 import express from "express";
+import AWS from 'aws-sdk';
+import dotenv from 'dotenv';
 import mongoose from "mongoose";
 import User from "./modules/User.js";
 import Post from "./modules/posts.js";
@@ -6,18 +8,17 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createToken, validateToken } from "./jwt.js";
 
+// Load environment variables
+dotenv.config();
 
-import AWS from 'aws-sdk';
+// Configure AWS
 AWS.config.update({
-  accessKeyId: 'AKIAX4I53MGBE2FL6MX3',
-  secretAccessKey: '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',
-  region: 'us-east-1',
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.REGION,
 });
+
 const polly = new AWS.Polly();
-
-
-
-
 
 const app = express();
 const port = 3000;
@@ -28,29 +29,28 @@ app.post("/", async (req, res) => {
   res.send("Welcome To MythMaker Backend");
 });
 
-
 app.post('/speak', async (req, res) => {
   const { text, voiceId } = req.body;  
   const params = {
-      Text: text,
-      OutputFormat: 'mp3',
-      VoiceId: voiceId || 'Joanna'  
+    Text: text,
+    OutputFormat: 'mp3',
+    VoiceId: voiceId || 'Joanna'  
   };
 
   try {
-      const { AudioStream } = await polly.synthesizeSpeech(params).promise();
-      if (AudioStream instanceof Buffer) {
-          res.writeHead(200, {
-              'Content-Type': 'audio/mp3',
-              'Content-Length': AudioStream.length
-          });
-          res.end(AudioStream);
-      } else {
-          res.status(404).send('Audio stream not available');
-      }
+    const { AudioStream } = await polly.synthesizeSpeech(params).promise();
+    if (AudioStream instanceof Buffer) {
+      res.writeHead(200, {
+        'Content-Type': 'audio/mp3',
+        'Content-Length': AudioStream.length
+      });
+      res.end(AudioStream);
+    } else {
+      res.status(404).send('Audio stream not available');
+    }
   } catch (err) {
-      console.error('Error calling Amazon Polly:', err);
-      res.status(500).send(err.message);
+    console.error('Error calling Amazon Polly:', err);
+    res.status(500).send(err.message);
   }
 });
 
