@@ -52,6 +52,33 @@ app.post('/speak', async (req, res) => {
   }
 });
 
+app.get("/searchPosts", async (req, res) => {
+  const { query } = req.query; 
+
+  if (!query) {
+    return res.status(400).send("Search query is required.");
+  }
+
+  try {
+    const posts = await Post.find({
+      $or: [
+        { title: { $regex: query, $options: "i" } }, 
+        { story: { $regex: query, $options: "i" } }  
+      ]
+    })
+    .populate("postedBy", "name pfp -_id")  
+    .populate({
+      path: "comments.postedBy",
+      select: "name pfp -_id",  
+    });
+
+
+    res.json(posts); 
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("An error occurred while searching for posts.");
+  }
+});
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
