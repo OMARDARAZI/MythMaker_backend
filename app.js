@@ -27,6 +27,26 @@ app.post("/", async (req, res) => {
   res.send("Welcome To MythMaker Backend");
 });
 
+
+
+app.get("/userInfo/:id", async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).send("User not found.");
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).send("An error occurred while retrieving user data.");
+    console.error(error);
+  }
+});
+
+
+
+
+
 app.post('/speak', async (req, res) => {
   const { text, voiceId } = req.body;  
   const params = {
