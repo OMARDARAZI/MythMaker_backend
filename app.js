@@ -483,10 +483,10 @@ app.get("/post/:postId", async (req, res) => {
     const postId = req.params.postId;
 
     const post = await Post.findById(postId)
-      .populate("postedBy", "name -_id")
+      .populate("postedBy", "name pfp -_id")
       .populate({
         path: "comments.postedBy",
-        select: "name -_id",
+        select: "name pfp -_id", 
       });
 
     if (!post) {
