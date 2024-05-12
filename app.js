@@ -483,10 +483,10 @@ app.get("/post/:postId", async (req, res) => {
     const postId = req.params.postId;
 
     const post = await Post.findById(postId)
-      .populate("postedBy", "name pfp -_id")
+      .populate("postedBy", "name pfp _id")  // Include _id in the selection
       .populate({
         path: "comments.postedBy",
-        select: "name pfp -_id", 
+        select: "name pfp _id",  // Include _id in the selection
       });
 
     if (!post) {
@@ -499,6 +499,7 @@ app.get("/post/:postId", async (req, res) => {
     res.status(500).send("An error occurred while retrieving the post.");
   }
 });
+
 
 app.get("/user/:userId/posts", async (req, res) => {
   try {
