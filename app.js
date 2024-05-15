@@ -185,15 +185,13 @@ app.post("/follow", async (req, res) => {
     targetUser.followers.push(currentUserId);
     await targetUser.save();
 
-    // Send Notification to Target User using OneSignal
     const notification = {
       contents: {
-        en: "You have a new follower!",
+        en: `${currentUser.name} started following you!`,
       },
       filters: [
         { field: "tag", key: "id", relation: "=", value: targetUserId },
       ],
-      // Specify the icon URL here
       small_icon: "https://i.ibb.co/kGNX1ZY/logo.png",
     };
 
@@ -210,6 +208,7 @@ app.post("/follow", async (req, res) => {
     console.error(error);
   }
 });
+
 
 app.post("/unfollow", async (req, res) => {
   const currentUserId = req.body.currentUserId;
