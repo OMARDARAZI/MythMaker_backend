@@ -99,31 +99,62 @@ app.get("/searchPosts", async (req, res) => {
     res.status(500).send("An error occurred while searching for posts.");
   }
 });
+app.post("/follow", async (req, res) => {
+    const currentUserId = req.body.currentUserId;
+    const targetUserId = req.body.targetUserId;
 
-app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  const lowerCaseEmail = email.toLowerCase();
+    if (!currentUserId || !targetUserId) {
+        return res.status(400).send("Both current user ID and target user ID are required.");
+    }
 
-  try {
-    const user = await User.findOne({ email: lowerCaseEmail });
-    if (!user) return res.status(400).send("Wrong email or password");
+    try {
+        if (currentUserId === targetUserId) {
+            return res.status(400).send("You cannot follow yourself.");
+        }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) return res.status(400).send("Wrong email or password");
+        const currentUser = await User.findById(currentUserId);
+        const targetUser = await User.findById(targetUserId);
 
-    const accessToken = createToken(user);
+        if (!currentUser || !targetUser) {
+            return res.status(404).send("One or both users not found.");
+        }
 
-    res.status(200).json({
-      message: "Login Successfully",
-      accessToken,
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      pfp: user.pfp,
-    });
-  } catch (e) {
-    res.status(500).send(e.message);
-  }
+        if (currentUser.following.includes(targetUserId)) {
+            return res.status(400).send("You are already following this user.");
+        }
+
+        if (targetUser.followers.includes(currentUserId)) {
+            return res.status(400).send("You cannot follow a user who is already following you.");
+        }
+
+        currentUser.following.push(targetUserId);
+        await currentUser.save();
+
+        targetUser.followers.push(currentUserId);
+        await targetUser.save();
+
+        // Send Notification to Target User using OneSignal
+        const notification = {
+            contents: {
+                en: "You have a new follower!",
+            },
+            filters: [
+                { field: "tag", key: "id", relation: "=", value: targetUserId }
+            ]
+        };
+
+        try {
+            const response = await client.createNotification(notification);
+            console.log("Notification sent with response:", response.body);
+        } catch (error) {
+            console.error("Error sending notification:", error);
+        }
+
+        res.status(200).send("Followed successfully.");
+    } catch (error) {
+        res.status(500).send("An error occurred during the follow process.");
+        console.error(error);
+    }
 });
 
 app.post("/register", async (req, res) => {
