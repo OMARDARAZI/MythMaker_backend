@@ -192,7 +192,8 @@ app.post("/follow", async (req, res) => {
       filters: [
         { field: "tag", key: "id", relation: "=", value: targetUserId },
       ],
-      small_icon: "https://i.ibb.co/kGNX1ZY/logo.png",
+      small_icon: "ic_stat_logo_removebg_preview",
+      android_accent_color: "44e37a", 
     };
 
     try {
@@ -208,6 +209,7 @@ app.post("/follow", async (req, res) => {
     console.error(error);
   }
 });
+
 
 
 app.post("/unfollow", async (req, res) => {
