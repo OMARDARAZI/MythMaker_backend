@@ -1,12 +1,13 @@
 import express from "express";
-import AWS from 'aws-sdk';
-import dotenv from 'dotenv';
+import AWS from "aws-sdk";
+import dotenv from "dotenv";
 import mongoose from "mongoose";
 import User from "./modules/User.js";
 import Post from "./modules/posts.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createToken, validateToken } from "./jwt.js";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -27,134 +28,55 @@ app.post("/", async (req, res) => {
   res.send("Welcome To MythMaker Backend");
 });
 
-
-
-app.get("/userInfo/:id", async (req, res) => {
-  const userId = req.params.id;
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).send("User not found.");
-    }
-    res.status(200).json(user);
-  } catch (error) {
-    res.status(500).send("An error occurred while retrieving user data.");
-    console.error(error);
-  }
-});
-
-
-
-
-
-app.post('/speak', async (req, res) => {
-  const { text, voiceId } = req.body;  
+app.post("/speak", async (req, res) => {
+  const { text, voiceId } = req.body;
   const params = {
     Text: text,
-    OutputFormat: 'mp3',
-    VoiceId: voiceId || 'Joanna'  
+    OutputFormat: "mp3",
+    VoiceId: voiceId || "Joanna",
   };
 
   try {
     const { AudioStream } = await polly.synthesizeSpeech(params).promise();
     if (AudioStream instanceof Buffer) {
       res.writeHead(200, {
-        'Content-Type': 'audio/mp3',
-        'Content-Length': AudioStream.length
+        "Content-Type": "audio/mp3",
+        "Content-Length": AudioStream.length,
       });
       res.end(AudioStream);
     } else {
-      res.status(404).send('Audio stream not available');
+      res.status(404).send("Audio stream not available");
     }
   } catch (err) {
-    console.error('Error calling Amazon Polly:', err);
+    console.error("Error calling Amazon Polly:", err);
     res.status(500).send(err.message);
   }
 });
 
-app.get("/searchPosts", async (req, res) => {
-  const { query } = req.query; 
-
-  if (!query) {
-    return res.status(400).send("Search query is required.");
-  }
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const lowerCaseEmail = email.toLowerCase();
 
   try {
-    const posts = await Post.find({
-      $or: [
-        { title: { $regex: query, $options: "i" } }, 
-        { story: { $regex: query, $options: "i" } }  
-      ]
-    })
-    .populate("postedBy", "name pfp -_id")  
-    .populate({
-      path: "comments.postedBy",
-      select: "name pfp -_id",  
+    const user = await User.findOne({ email: lowerCaseEmail });
+    if (!user) return res.status(400).send("Wrong email or password");
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) return res.status(400).send("Wrong email or password");
+
+    const accessToken = createToken(user);
+
+    res.status(200).json({
+      message: "Login Successfully",
+      accessToken,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      pfp: user.pfp,
     });
-
-
-    res.json(posts); 
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("An error occurred while searching for posts.");
+  } catch (e) {
+    res.status(500).send(e.message);
   }
-});
-app.post("/follow", async (req, res) => {
-    const currentUserId = req.body.currentUserId;
-    const targetUserId = req.body.targetUserId;
-
-    if (!currentUserId || !targetUserId) {
-        return res.status(400).send("Both current user ID and target user ID are required.");
-    }
-
-    try {
-        if (currentUserId === targetUserId) {
-            return res.status(400).send("You cannot follow yourself.");
-        }
-
-        const currentUser = await User.findById(currentUserId);
-        const targetUser = await User.findById(targetUserId);
-
-        if (!currentUser || !targetUser) {
-            return res.status(404).send("One or both users not found.");
-        }
-
-        if (currentUser.following.includes(targetUserId)) {
-            return res.status(400).send("You are already following this user.");
-        }
-
-        if (targetUser.followers.includes(currentUserId)) {
-            return res.status(400).send("You cannot follow a user who is already following you.");
-        }
-
-        currentUser.following.push(targetUserId);
-        await currentUser.save();
-
-        targetUser.followers.push(currentUserId);
-        await targetUser.save();
-
-        // Send Notification to Target User using OneSignal
-        const notification = {
-            contents: {
-                en: "You have a new follower!",
-            },
-            filters: [
-                { field: "tag", key: "id", relation: "=", value: targetUserId }
-            ]
-        };
-
-        try {
-            const response = await client.createNotification(notification);
-            console.log("Notification sent with response:", response.body);
-        } catch (error) {
-            console.error("Error sending notification:", error);
-        }
-
-        res.status(200).send("Followed successfully.");
-    } catch (error) {
-        res.status(500).send("An error occurred during the follow process.");
-        console.error(error);
-    }
 });
 
 app.post("/register", async (req, res) => {
@@ -204,8 +126,8 @@ app.get("/getUserInfo", validateToken, async (req, res) => {
     const posts = await Post.find({ postedBy: user._id }).lean();
 
     const { password, ...userInfo } = user.toObject();
-    
-    res.json({...userInfo, posts});
+
+    res.json({ ...userInfo, posts });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server error");
@@ -217,43 +139,59 @@ app.post("/follow", async (req, res) => {
   const targetUserId = req.body.targetUserId;
 
   if (!currentUserId || !targetUserId) {
-    return res
-      .status(400)
-      .send("Both current user ID and target user ID are required.");
+      return res.status(400).send("Both current user ID and target user ID are required.");
   }
 
   try {
-    if (currentUserId === targetUserId) {
-      return res.status(400).send("You cannot follow yourself.");
-    }
+      if (currentUserId === targetUserId) {
+          return res.status(400).send("You cannot follow yourself.");
+      }
 
-    const currentUser = await User.findById(currentUserId);
-    const targetUser = await User.findById(targetUserId);
+      const currentUser = await User.findById(currentUserId);
+      const targetUser = await User.findById(targetUserId);
 
-    if (!currentUser || !targetUser) {
-      return res.status(404).send("One or both users not found.");
-    }
+      if (!currentUser || !targetUser) {
+          return res.status(404).send("One or both users not found.");
+      }
 
-    if (currentUser.following.includes(targetUserId)) {
-      return res.status(400).send("You are already following this user.");
-    }
+      if (currentUser.following.includes(targetUserId)) {
+          return res.status(400).send("You are already following this user.");
+      }
 
-    if (targetUser.followers.includes(currentUserId)) {
-      return res.status(400).send("You cannot follow a user who is already following you.");
-    }
+      if (targetUser.followers.includes(currentUserId)) {
+          return res.status(400).send("You cannot follow a user who is already following you.");
+      }
 
-    currentUser.following.push(targetUserId);
-    await currentUser.save();
+      currentUser.following.push(targetUserId);
+      await currentUser.save();
 
-    targetUser.followers.push(currentUserId);
-    await targetUser.save();
+      targetUser.followers.push(currentUserId);
+      await targetUser.save();
 
-    res.status(200).send("Followed successfully.");
+      // Send Notification to Target User using OneSignal
+      const notification = {
+          contents: {
+              en: "You have a new follower!",
+          },
+          filters: [
+              { field: "tag", key: "id", relation: "=", value: targetUserId }
+          ]
+      };
+
+      try {
+          const response = await client.createNotification(notification);
+          console.log("Notification sent with response:", response.body);
+      } catch (error) {
+          console.error("Error sending notification:", error);
+      }
+
+      res.status(200).send("Followed successfully.");
   } catch (error) {
-    res.status(500).send("An error occurred during the follow process.");
-    console.error(error);
+      res.status(500).send("An error occurred during the follow process.");
+      console.error(error);
   }
 });
+
 
 app.post("/unfollow", async (req, res) => {
   const currentUserId = req.body.currentUserId;
@@ -465,7 +403,7 @@ app.get("/searchUsers", async (req, res) => {
 });
 
 app.get("/searchPosts", async (req, res) => {
-  const { query } = req.query; 
+  const { query } = req.query;
 
   if (!query) {
     return res.status(400).send("Search query is required.");
@@ -474,20 +412,34 @@ app.get("/searchPosts", async (req, res) => {
   try {
     const posts = await Post.find({
       $or: [
-        { title: { $regex: query, $options: "i" } }, 
-        { story: { $regex: query, $options: "i" } }  
-      ]
+        { title: { $regex: query, $options: "i" } },
+        { story: { $regex: query, $options: "i" } },
+      ],
     })
-    .populate("postedBy", "name -_id") 
-    .populate({
-      path: "comments.postedBy",
-      select: "name -_id",
-    });
+      .populate("postedBy", "name pfp -_id")
+      .populate({
+        path: "comments.postedBy",
+        select: "name pfp -_id",
+      });
 
-    res.json(posts); 
+    res.json(posts);
   } catch (error) {
     console.error(error);
     res.status(500).send("An error occurred while searching for posts.");
+  }
+});
+
+app.get("/userInfo/:id", async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).send("User not found.");
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).send("An error occurred while retrieving user data.");
+    console.error(error);
   }
 });
 
@@ -514,10 +466,10 @@ app.get("/post/:postId", async (req, res) => {
     const postId = req.params.postId;
 
     const post = await Post.findById(postId)
-      .populate("postedBy", "name pfp _id")  // Include _id in the selection
+      .populate("postedBy", "name pfp -_id")
       .populate({
         path: "comments.postedBy",
-        select: "name pfp _id",  // Include _id in the selection
+        select: "name pfp -_id", 
       });
 
     if (!post) {
@@ -530,7 +482,6 @@ app.get("/post/:postId", async (req, res) => {
     res.status(500).send("An error occurred while retrieving the post.");
   }
 });
-
 
 app.get("/user/:userId/posts", async (req, res) => {
   try {
@@ -580,8 +531,8 @@ app.get("/feed", async (req, res) => {
       res.status(200).json(posts);
     } else {
       const posts = await Post.find({})
-        .sort({ likes: -1 }) 
-        .limit(15) 
+        .sort({ likes: -1 })
+        .limit(15)
         .populate("postedBy", "pfp name _id")
         .populate({
           path: "comments.postedBy",
