@@ -8,6 +8,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createToken, validateToken } from "./jwt.js";
 import crypto from "crypto";
+import OneSignal from "onesignal-node";
 
 dotenv.config();
 
@@ -16,6 +17,18 @@ AWS.config.update({
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: process.env.REGION,
 });
+
+// const client = new OneSignal.Client({
+//   userAuthKey: 'ZDE0MzRkM2UtNmE0Yi00MWUyLWJlZmQtODU1MzA0MmI3ZTAz',
+//   app: {
+//     appAuthKey: 'MDc5NDI3YTItY2Y1MS00NGNiLTk0MDUtYjg1ZGIzYzY5Mzhj',
+//     appId: 'd22f2ecd-f1ff-4a77-91a2-11ff0cfd3832'
+//   }
+// });
+const client = new OneSignal.Client(
+  "d22f2ecd-f1ff-4a77-91a2-11ff0cfd3832",
+  "MDc5NDI3YTItY2Y1MS00NGNiLTk0MDUtYjg1ZGIzYzY5Mzhj"
+);
 
 const polly = new AWS.Polly();
 
@@ -139,59 +152,64 @@ app.post("/follow", async (req, res) => {
   const targetUserId = req.body.targetUserId;
 
   if (!currentUserId || !targetUserId) {
-      return res.status(400).send("Both current user ID and target user ID are required.");
+    return res
+      .status(400)
+      .send("Both current user ID and target user ID are required.");
   }
 
   try {
-      if (currentUserId === targetUserId) {
-          return res.status(400).send("You cannot follow yourself.");
-      }
+    if (currentUserId === targetUserId) {
+      return res.status(400).send("You cannot follow yourself.");
+    }
 
-      const currentUser = await User.findById(currentUserId);
-      const targetUser = await User.findById(targetUserId);
+    const currentUser = await User.findById(currentUserId);
+    const targetUser = await User.findById(targetUserId);
 
-      if (!currentUser || !targetUser) {
-          return res.status(404).send("One or both users not found.");
-      }
+    if (!currentUser || !targetUser) {
+      return res.status(404).send("One or both users not found.");
+    }
 
-      if (currentUser.following.includes(targetUserId)) {
-          return res.status(400).send("You are already following this user.");
-      }
+    if (currentUser.following.includes(targetUserId)) {
+      return res.status(400).send("You are already following this user.");
+    }
 
-      if (targetUser.followers.includes(currentUserId)) {
-          return res.status(400).send("You cannot follow a user who is already following you.");
-      }
+    if (targetUser.followers.includes(currentUserId)) {
+      return res
+        .status(400)
+        .send("You cannot follow a user who is already following you.");
+    }
 
-      currentUser.following.push(targetUserId);
-      await currentUser.save();
+    currentUser.following.push(targetUserId);
+    await currentUser.save();
 
-      targetUser.followers.push(currentUserId);
-      await targetUser.save();
+    targetUser.followers.push(currentUserId);
+    await targetUser.save();
 
-      // Send Notification to Target User using OneSignal
-      const notification = {
-          contents: {
-              en: "You have a new follower!",
-          },
-          filters: [
-              { field: "tag", key: "id", relation: "=", value: targetUserId }
-          ]
-      };
+    // Send Notification to Target User using OneSignal
+    const notification = {
+      contents: {
+        en: "You have a new follower!",
+      },
+      filters: [
+        { field: "tag", key: "id", relation: "=", value: targetUserId },
+      ],
+      // Specify the icon URL here
+      small_icon: "https://i.ibb.co/kGNX1ZY/logo.png",
+    };
 
-      try {
-          const response = await client.createNotification(notification);
-          console.log("Notification sent with response:", response.body);
-      } catch (error) {
-          console.error("Error sending notification:", error);
-      }
+    try {
+      const response = await client.createNotification(notification);
+      console.log("Notification sent with response:", response.body);
+    } catch (error) {
+      console.error("Error sending notification:", error);
+    }
 
-      res.status(200).send("Followed successfully.");
+    res.status(200).send("Followed successfully.");
   } catch (error) {
-      res.status(500).send("An error occurred during the follow process.");
-      console.error(error);
+    res.status(500).send("An error occurred during the follow process.");
+    console.error(error);
   }
 });
-
 
 app.post("/unfollow", async (req, res) => {
   const currentUserId = req.body.currentUserId;
@@ -469,7 +487,7 @@ app.get("/post/:postId", async (req, res) => {
       .populate("postedBy", "name pfp -_id")
       .populate({
         path: "comments.postedBy",
-        select: "name pfp -_id", 
+        select: "name pfp -_id",
       });
 
     if (!post) {
