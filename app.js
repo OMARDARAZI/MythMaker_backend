@@ -69,25 +69,20 @@ app.post("/speak", async (req, res) => {
 app.get("/following/:userId", async (req, res) => {
   const userId = req.params.userId;
 
-  if (!userId) {
-    return res.status(400).send("User ID is required.");
-  }
-
   try {
-    const user = await User.findById(userId).populate('following', 'name pfp');
+    const user = await User.findById(userId).populate("following", "name pfp");
 
     if (!user) {
       return res.status(404).send("User not found.");
     }
 
-    res.status(200).json({
-      following: user.following
-    });
+    res.status(200).json(user.following);
   } catch (error) {
     console.error(error);
     res.status(500).send("An error occurred while retrieving the following users.");
   }
 });
+
 
 app.get("/followers/:userId", async (req, res) => {
   const userId = req.params.userId;
@@ -575,7 +570,8 @@ app.get("/user/:userId/posts", async (req, res) => {
     const userId = req.params.userId;
 
     const posts = await Post.find({ postedBy: userId })
-      .populate("postedBy", "name -_id") 
+      .sort({ createdAt: -1 }) // Sort posts from newest to oldest
+      .populate("postedBy", "name -_id")
       .populate({
         path: "comments.postedBy",
         select: "name -_id",
@@ -593,6 +589,7 @@ app.get("/user/:userId/posts", async (req, res) => {
       .send("An error occurred while retrieving the user's posts.");
   }
 });
+
 
 app.get("/feed", async (req, res) => {
   const userId = req.query.userId;
