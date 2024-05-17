@@ -66,6 +66,73 @@ app.post("/speak", async (req, res) => {
   }
 });
 
+app.get("/following/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  if (!userId) {
+    return res.status(400).send("User ID is required.");
+  }
+
+  try {
+    const user = await User.findById(userId).populate('following', 'name pfp');
+
+    if (!user) {
+      return res.status(404).send("User not found.");
+    }
+
+    res.status(200).json({
+      following: user.following
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("An error occurred while retrieving the following users.");
+  }
+});
+
+app.get("/followers/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const user = await User.findById(userId).populate("followers", "name pfp");
+
+    if (!user) {
+      return res.status(404).send("User not found.");
+    }
+
+    res.status(200).json(user.followers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("An error occurred while retrieving the followers.");
+  }
+});
+
+app.get("/comments/:postId", async (req, res) => {
+  const postId = req.params.postId;
+
+  if (!postId) {
+    return res.status(400).send("Post ID is required.");
+  }
+
+  try {
+    const post = await Post.findById(postId).populate({
+      path: 'comments.postedBy',
+      select: 'name pfp'
+    });
+
+    if (!post) {
+      return res.status(404).send("Post not found.");
+    }
+
+    res.status(200).json({
+      comments: post.comments
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("An error occurred while retrieving the comments.");
+  }
+});
+
+
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const lowerCaseEmail = email.toLowerCase();
@@ -485,10 +552,10 @@ app.get("/post/:postId", async (req, res) => {
     const postId = req.params.postId;
 
     const post = await Post.findById(postId)
-      .populate("postedBy", "name pfp")  // Include _id by not excluding it
+      .populate("postedBy", "name pfp")  
       .populate({
         path: "comments.postedBy",
-        select: "name pfp",  // Include _id by not excluding it
+        select: "name pfp", 
       });
 
     if (!post) {
