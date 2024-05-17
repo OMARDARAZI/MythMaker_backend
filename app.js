@@ -485,10 +485,10 @@ app.get("/post/:postId", async (req, res) => {
     const postId = req.params.postId;
 
     const post = await Post.findById(postId)
-      .populate("postedBy", "name pfp -_id")
+      .populate("postedBy", "name pfp")  // Include _id by not excluding it
       .populate({
         path: "comments.postedBy",
-        select: "name pfp -_id",
+        select: "name pfp",  // Include _id by not excluding it
       });
 
     if (!post) {
@@ -502,15 +502,16 @@ app.get("/post/:postId", async (req, res) => {
   }
 });
 
+
 app.get("/user/:userId/posts", async (req, res) => {
   try {
     const userId = req.params.userId;
 
     const posts = await Post.find({ postedBy: userId })
-      .populate("postedBy", "name -_id") // Assuming you still want to populate the 'postedBy' field
+      .populate("postedBy", "name -_id") 
       .populate({
         path: "comments.postedBy",
-        select: "name -_id", // Populating comment authors, adjust as necessary
+        select: "name -_id",
       });
 
     if (posts.length === 0) {
