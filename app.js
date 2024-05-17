@@ -524,6 +524,21 @@ app.get("/userInfo/:id", async (req, res) => {
   }
 });
 
+async function sendOneSignalNotification(playerId, message) {
+  const notification = {
+    include_player_ids: [playerId],
+    contents: { en: message },
+    headings: { en: 'New Post Notification' }
+  };
+
+  try {
+    await client.createNotification(notification);
+    console.log(`Notification sent to player ID ${playerId}`);
+  } catch (error) {
+    console.error(`Error sending notification to player ID ${playerId}:`, error);
+  }
+}
+
 app.post("/addPost", async (req, res) => {
   try {
     const post = new Post({
@@ -536,6 +551,27 @@ app.post("/addPost", async (req, res) => {
     });
 
     await post.save();
+
+    const user = await User.findById(req.body.postedBy).populate('followers', '_id playerId');
+
+    if (user) {
+      const notifications = user.followers.map(follower => ({
+        recipient: follower._id,
+        sender: user._id,
+        type: 'new_post',
+        message: `${user.name} has created a new post: ${post.title}`
+      }));
+
+      await Notification.insertMany(notifications);
+
+      user.followers.forEach(follower => {
+        if (follower.playerId) {
+          const notificationMessage = `${user.name} has created a new post: ${post.title}`;
+          sendOneSignalNotification(follower.playerId, notificationMessage);
+        }
+      });
+    }
+
     res.status(201).json(post);
   } catch (error) {
     res.status(400).json({ message: error.message });
