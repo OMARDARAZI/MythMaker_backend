@@ -9,6 +9,7 @@ import jwt from "jsonwebtoken";
 import { createToken, validateToken } from "./jwt.js";
 import crypto from "crypto";
 import OneSignal from "onesignal-node";
+import cors from 'cors';
 
 dotenv.config();
 
@@ -34,6 +35,8 @@ const polly = new AWS.Polly();
 
 const app = express();
 const port = 3000;
+
+app.use(cors());
 
 app.use(express.json());
 
