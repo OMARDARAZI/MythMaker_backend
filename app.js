@@ -240,59 +240,54 @@ app.delete("/deletePost", async (req, res) => {
 });
 
 app.post("/follow", async (req, res) => {
-  const { currentUserId, targetUserId } = req.body;
+  const currentUserId = req.body.currentUserId;
+  const targetUserId = req.body.targetUserId;
 
-  // Check if both user IDs are provided
   if (!currentUserId || !targetUserId) {
-    return res.status(400).send("Both current user ID and target user ID are required.");
-  }
-
-  // Prevent users from following themselves
-  if (currentUserId === targetUserId) {
-    return res.status(400).send("You cannot follow yourself.");
+    return res
+      .status(400)
+      .send("Both current user ID and target user ID are required.");
   }
 
   try {
-    // Fetch both users from the database
+    if (currentUserId === targetUserId) {
+      return res.status(400).send("You cannot follow yourself.");
+    }
+
     const currentUser = await User.findById(currentUserId);
     const targetUser = await User.findById(targetUserId);
 
-    // Check if both users exist
     if (!currentUser || !targetUser) {
       return res.status(404).send("One or both users not found.");
     }
 
-    // Check if the current user is already following the target user
     if (currentUser.following.includes(targetUserId)) {
       return res.status(400).send("You are already following this user.");
     }
 
-    // Optional: Check if the target user is already following the current user
     if (targetUser.followers.includes(currentUserId)) {
-      return res.status(400).send("You cannot follow a user who is already following you.");
+      return res
+        .status(400)
+        .send("You cannot follow a user who is already following you.");
     }
 
-    // Add the target user ID to the current user's following list
     currentUser.following.push(targetUserId);
     await currentUser.save();
 
-    // Add the current user ID to the target user's followers list
     targetUser.followers.push(currentUserId);
     await targetUser.save();
 
-    // Prepare the notification object
     const notification = {
       contents: {
         en: `${currentUser.name} started following you!`,
       },
       filters: [
-        { field: "tag", key: "followId", relation: "=", value: targetUserId },
+        { field: "tag", key: "id", relation: "=", value: targetUserId },
       ],
       small_icon: "ic_stat_logo_removebg_preview",
-      android_accent_color: "44e37a",
+      android_accent_color: "44e37a", 
     };
 
-    // Send the notification
     try {
       const response = await client.createNotification(notification);
       console.log("Notification sent with response:", response.body);
@@ -300,11 +295,10 @@ app.post("/follow", async (req, res) => {
       console.error("Error sending notification:", error);
     }
 
-    // Send a success response
     res.status(200).send("Followed successfully.");
   } catch (error) {
-    console.error("An error occurred during the follow process:", error);
     res.status(500).send("An error occurred during the follow process.");
+    console.error(error);
   }
 });
 
