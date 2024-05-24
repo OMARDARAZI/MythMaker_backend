@@ -255,7 +255,7 @@ app.post("/follow", async (req, res) => {
         en: `${currentUser.name} started following you!`,
       },
       filters: [
-        { field: "tag", key: "id", relation: "=", value: targetUserId },
+        { field: "tag", key: "followId", relation: "=", value: targetUserId },
       ],
       small_icon: "ic_stat_logo_removebg_preview",
       android_accent_color: "44e37a", 
