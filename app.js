@@ -396,6 +396,35 @@ app.get("/hasLikedPost", async (req, res) => {
   }
 });
 
+app.delete("/deletePost", async (req, res) => {
+  const { postId, userId } = req.body;
+
+  if (!postId || !userId) {
+    return res.status(400).send("Post ID and User ID are required.");
+  }
+
+  try {
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).send("Post not found.");
+    }
+
+    if (post.postedBy.toString() !== userId) {
+      return res.status(403).send("You are not authorized to delete this post.");
+    }
+
+    await Post.findByIdAndDelete(postId);
+
+    res.status(200).send("Post deleted successfully.");
+  } catch (error) {
+    res.status(500).send("An error occurred while deleting the post.");
+    console.error(error);
+  }
+});
+
+
+
 app.post("/comment", async (req, res) => {
   const postId = req.body.postId;
   const userId = req.body.userId;
